@@ -1,126 +1,56 @@
+const bcrypt = require('bcrypt');
 const userRepository = require('../repositories/userRepository');
+const authService = require('../services/authService');
 
 class UserController {
 
-    listar(req, res) {
-        return res.status(200).json({
-            sucesso: true,
-            dados: userRepository.listar()
-        });
+    async registrar(req, res) {
+        try {
+            const { nome, email, senha, idade } = req.body;
+
+            const senhaHash = await bcrypt.hash(senha, 10);
+
+            const usuario = await userRepository.criar({
+                nome,
+                email,
+                senha: senhaHash,
+                idade
+            });
+
+            return res.status(201).json(usuario);
+
+        } catch (error) {
+            return res.status(400).json({ mensagem: error.message });
+        }
     }
 
-    buscarPorId(req, res) {
-        const id = parseInt(req.params.id);
+    async login(req, res) {
+        const { email, senha } = req.body;
 
-        if (isNaN(id) || id <= 0) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: 'ID inválido'
-            });
+        try {
+            const resultado = await authService.login(email, senha);
+            return res.status(200).json(resultado);
+
+        } catch (error) {
+            return res.status(401).json({ mensagem: error.message });
         }
+    }
 
-        const usuario = userRepository.buscarPorId(id);
+    async listar(req, res) {
+        const usuarios = await userRepository.listar();
+        return res.json(usuarios);
+    }
+
+    async deletar(req, res) {
+        const id = req.params.id;
+
+        const usuario = await userRepository.deletar(id);
 
         if (!usuario) {
-            return res.status(404).json({
-                sucesso: false,
-                mensagem: 'Usuário não encontrado'
-            });
+            return res.status(404).json({ mensagem: 'Usuário não encontrado' });
         }
 
-        return res.status(200).json({
-            sucesso: true,
-            dados: usuario
-        });
-    }
-
-    criar(req, res) {
-        const { nome, email, idade } = req.body;
-
-        if (!nome || !email || idade === undefined) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: 'Nome, email e idade são obrigatórios'
-            });
-        }
-
-        if (typeof idade !== 'number' || idade <= 0) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: 'Idade inválida'
-            });
-        }
-
-        const emailExiste = userRepository.buscarPorEmail(email);
-
-        if (emailExiste) {
-            return res.status(409).json({
-                sucesso: false,
-                mensagem: 'Email já cadastrado'
-            });
-        }
-
-        const novoUsuario = userRepository.criar(nome, email, idade);
-
-        return res.status(201).json({
-            sucesso: true,
-            mensagem: 'Usuário criado com sucesso',
-            dados: novoUsuario
-        });
-    }
-
-    atualizar(req, res) {
-        const id = parseInt(req.params.id);
-        const { nome, email, idade } = req.body;
-
-        if (isNaN(id) || id <= 0) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: 'ID inválido'
-            });
-        }
-
-        const usuarioExistente = userRepository.buscarPorId(id);
-
-        if (!usuarioExistente) {
-            return res.status(404).json({
-                sucesso: false,
-                mensagem: 'Usuário não encontrado'
-            });
-        }
-
-        const usuarioAtualizado = userRepository.atualizar(id, nome, email, idade);
-
-        return res.status(200).json({
-            sucesso: true,
-            mensagem: 'Usuário atualizado com sucesso',
-            dados: usuarioAtualizado
-        });
-    }
-
-    deletar(req, res) {
-        const id = parseInt(req.params.id);
-
-        if (isNaN(id) || id <= 0) {
-            return res.status(400).json({
-                sucesso: false,
-                mensagem: 'ID inválido'
-            });
-        }
-
-        const removido = userRepository.deletar(id);
-
-        if (!removido) {
-            return res.status(404).json({
-                sucesso: false,
-                mensagem: 'Usuário não encontrado'
-            });
-        }
-
-        return res.status(200).json({
-            sucesso: true,
-            mensagem: 'Usuário removido com sucesso'
-        });
+        return res.json({ mensagem: 'Usuário deletado' });
     }
 }
 

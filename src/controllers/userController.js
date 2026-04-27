@@ -41,6 +41,24 @@ class UserController {
         return res.json(usuarios);
     }
 
+    async atualizar(req, res) {
+    const id = req.params.id;
+    const dados = req.body;
+
+    try {
+        const usuario = await userRepository.atualizar(id, dados);
+
+        if (!usuario) {
+            return res.status(404).json({ mensagem: 'Usuário não encontrado' });
+        }
+
+        return res.status(200).json(usuario);
+
+    } catch (error) {
+        return res.status(400).json({ mensagem: error.message });
+    }
+}
+
     async deletar(req, res) {
         const id = req.params.id;
 
